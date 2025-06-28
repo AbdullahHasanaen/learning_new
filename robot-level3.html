@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>برمج الروبوت - المستوى 3</title>
+  <style>
+    body {
+      font-family: Tahoma, sans-serif;
+      background-color: #eef;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 { color: #0033aa; }
+    .container { display: flex; gap: 40px; align-items: flex-start; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 50px);
+      grid-template-rows: repeat(9, 50px);
+      gap: 2px;
+    }
+    .cell {
+      width: 50px; height: 50px;
+      border: 1px solid #ccc;
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+    }
+    .wall { background-color: #999; }
+    .trail { background-color: #d0f0d0; }
+    textarea {
+      width: 400px;
+      height: 180px;
+      font-family: monospace;
+      font-size: 15px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .run-btn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: green;
+      color: white;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .instructions {
+      max-width: 250px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .error { color: red; margin-top: 10px; }
+    .success { color: green; margin-top: 10px; }
+        .back-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #555;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: 0.3s;
+  font-size: 16px;
+}
+.back-btn:hover {
+  background-color: #333;
+}
+  </style>
+</head>
+<body>
+
+<h2>🚀 برمج الروبوت - المستوى 3</h2>
+
+<div class="container">
+  <div class="instructions">
+    <b>الأوامر المتاحة:</b><br><br>
+    <code>forward(n)</code>: يتحرك n خطوة للأمام<br>
+    <code>backward(n)</code>: يرجع للخلف<br>
+    <code>left()</code>: لفة يسار<br>
+    <code>right()</code>: لفة يمين<br>
+    <code>isBlocked()</code>: هل أمامك جدار؟<br><br>
+    يمكن استخدام <code>if</code> و <code>for</code><br><br>
+    👨‍💻 الحد: <span id="limitText"></span> سطر
+  </div>
+
+  <div>
+    <div class="grid" id="grid"></div>
+    <textarea id="codeArea">// مثال:
+for(let i = 0; i < 3; i++) {
+  if (!isBlocked()) {
+    forward(1);
+  } else {
+    right();
+  }
+}</textarea>
+    <button class="run-btn" onclick="runUserCode()">▶️ تشغيل الكود</button>
+    <div class="error" id="errorMsg"></div>
+  </div>
+  <br>
+    <a href="/learning_gaem1.html" class="back-btn">🔙 رجوع للرئيسية</a>
+</div>
+
+<script>
+const gridSize = 9;
+const grid = document.getElementById("grid");
+const codeArea = document.getElementById("codeArea");
+const errorMsg = document.getElementById("errorMsg");
+const limitText = document.getElementById("limitText");
+
+let robot, gift, walls = [], trail = [];
+let maxCommands = 10;
+let isRunning = false;
+let animationSpeed = 300;
+
+function generateRandomPosition() {
+  return {
+    x: Math.floor(Math.random() * (gridSize - 2)) + 1,
+    y: Math.floor(Math.random() * (gridSize - 2)) + 1
+  };
+}
+
+function isSamePos(a, b) {
+  return a.x === b.x && a.y === b.y;
+}
+
+function generateLevel() {
+  do {
+    robot = { ...generateRandomPosition(), dir: 1 };
+    gift = generateRandomPosition();
+  } while (isSamePos(robot, gift));
+
+  walls = [];
+  while (walls.length < 8) {
+    const wall = generateRandomPosition();
+    if (!isSamePos(wall, robot) && !isSamePos(wall, gift) &&
+        !walls.some(w => isSamePos(w, wall))) {
+      walls.push(wall);
+    }
+  }
+
+  trail = [];
+}
+
+function isWall(x, y) {
+  return walls.some(w => w.x === x && w.y === y);
+}
+
+function getRobotIcon(dir) {
+  return ['🤖↑','🤖→','🤖↓','🤖←'][dir];
+}
+
+function createGrid() {
+  grid.innerHTML = '';
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+
+      if (isWall(x, y)) {
+        cell.classList.add('wall');
+        cell.textContent = '🧱';
+      } else if (robot.x === x && robot.y === y) {
+        cell.textContent = getRobotIcon(robot.dir);
+      } else if (gift.x === x && gift.y === y) {
+        cell.textContent = '🎁';
+      } else if (trail.some(p => p.x === x && p.y === y)) {
+        cell.classList.add('trail');
+        cell.textContent = '✅';
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+  limitText.textContent = maxCommands;
+}
+
+// قائمة الأوامر المنفذة للتحكم في السرعة
+let commandQueue = [];
+let currentCommandIndex = 0;
+
+function executeNextCommand() {
+  if (currentCommandIndex >= commandQueue.length) {
+    checkWin();
+    return;
+  }
+
+  const command = commandQueue[currentCommandIndex];
+  try {
+    command();
+    currentCommandIndex++;
+    setTimeout(executeNextCommand, animationSpeed);
+  } catch (error) {
+    errorMsg.textContent = '⚠️ خطأ في تنفيذ الأمر: ' + error.message;
+    isRunning = false;
+  }
+}
+
+// دوال الروبوت مع إضافتها لقائمة الأوامر
+window.forward = function(n = 1) {
+  if (!isRunning) return;
+  for (let i = 0; i < n; i++) {
+    commandQueue.push(() => move(true));
+  }
+};
+
+window.backward = function(n = 1) {
+  if (!isRunning) return;
+  for (let i = 0; i < n; i++) {
+    commandQueue.push(() => move(false));
+  }
+};
+
+window.left = function() {
+  if (!isRunning) return;
+  commandQueue.push(() => {
+    robot.dir = (robot.dir + 3) % 4;
+    createGrid();
+  });
+};
+
+window.right = function() {
+  if (!isRunning) return;
+  commandQueue.push(() => {
+    robot.dir = (robot.dir + 1) % 4;
+    createGrid();
+  });
+};
+
+window.isBlocked = function() {
+  let dx = 0, dy = 0;
+  if (robot.dir === 0) dy = -1;
+  if (robot.dir === 1) dx = 1;
+  if (robot.dir === 2) dy = 1;
+  if (robot.dir === 3) dx = -1;
+
+  const nx = robot.x + dx;
+  const ny = robot.y + dy;
+
+  return nx < 0 || nx >= gridSize || ny < 0 || ny >= gridSize || isWall(nx, ny);
+};
+
+function move(forward = true) {
+  const dir = forward ? robot.dir : (robot.dir + 2) % 4;
+  let dx = 0, dy = 0;
+  if (dir === 0) dy = -1;
+  if (dir === 1) dx = 1;
+  if (dir === 2) dy = 1;
+  if (dir === 3) dx = -1;
+
+  const nx = robot.x + dx;
+  const ny = robot.y + dy;
+
+  if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !isWall(nx, ny)) {
+    trail.push({ x: robot.x, y: robot.y });
+    robot.x = nx;
+    robot.y = ny;
+    createGrid();
+  }
+}
+
+function countCodeLines(code) {
+  // إزالة التعليقات والأسطر الفارغة
+  const lines = code.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('//'));
+  
+  return lines.length;
+}
+
+function runUserCode() {
+  if (isRunning) return;
+  
+  errorMsg.textContent = '';
+  errorMsg.className = 'error';
+  
+  // إعادة تعيين الروبوت
+  const originalPos = { x: robot.x, y: robot.y, dir: robot.dir };
+  trail = [];
+  createGrid();
+
+  try {
+    const code = codeArea.value;
+    const lineCount = countCodeLines(code);
+
+    if (lineCount > maxCommands) {
+      errorMsg.textContent = `🚫 تجاوزت الحد المسموح: ${lineCount}/${maxCommands} سطر`;
+      return;
+    }
+
+    // إعداد التنفيذ
+    isRunning = true;
+    commandQueue = [];
+    currentCommandIndex = 0;
+
+    // تنفيذ الكود لبناء قائمة الأوامر
+    eval(code);
+
+    // بدء تنفيذ الأوامر
+    if (commandQueue.length === 0) {
+      errorMsg.textContent = '⚠️ لا توجد أوامر للتنفيذ';
+      isRunning = false;
+      return;
+    }
+
+    executeNextCommand();
+
+  } catch (err) {
+    errorMsg.textContent = '⚠️ خطأ في الكود: ' + err.message;
+    isRunning = false;
+  }
+}
+
+function checkWin() {
+  isRunning = false;
+  
+  if (robot.x === gift.x && robot.y === gift.y) {
+    errorMsg.textContent = "🎉 ممتاز! الروبوت وصل للهدية!";
+    errorMsg.className = 'success';
+    
+    // زيادة الصعوبة
+    maxCommands = Math.max(5, maxCommands - 1);
+    
+    setTimeout(() => {
+      generateLevel();
+      createGrid();
+    }, 2000);
+  } else {
+    errorMsg.textContent = "❌ لم تصل للهدية! حاول مرة أخرى";
+    setTimeout(() => {
+      // إعادة الروبوت لموقعه الأصلي
+      trail = [];
+      createGrid();
+    }, 1000);
+  }
+}
+
+// إضافة مفاتيح اختصار
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'Enter') {
+    runUserCode();
+  }
+});
+
+// تهيئة اللعبة
+generateLevel();
+createGrid();
+</script>
+
+</body>
+</html>

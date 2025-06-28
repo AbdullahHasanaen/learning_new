@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>برمج الروبوت - المستوى 2 (كود متطور)</title>
+  <style>
+    body {
+      font-family: 'Tahoma', sans-serif;
+      background-color: #e6f7ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: royalblue;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 50px);
+      grid-template-rows: repeat(9, 50px);
+      gap: 2px;
+      margin: 20px 0;
+    }
+    .cell {
+      background-color: white;
+      border: 1px solid #ccc;
+      font-size: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .wall {
+      background-color: #999;
+    }
+    textarea {
+      width: 400px;
+      height: 140px;
+      font-family: monospace;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    .run-btn {
+      padding: 10px 20px;
+      background-color: green;
+      color: white;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    .run-btn:hover {
+      background-color: darkgreen;
+    }
+    .instructions {
+      max-width: 250px;
+      font-size: 14px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .error {
+      color: red;
+      margin: 10px;
+    }
+    .back-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #555;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: 0.3s;
+  font-size: 16px;
+}
+.back-btn:hover {
+  background-color: #333;
+}
+
+  </style>
+</head>
+<body>
+
+  <h2>🚗 برمج الروبوت - المستوى 2 🎁</h2>
+
+  <div class="container">
+    <div class="instructions">
+      <strong>🧠 الأوامر المتاحة:</strong><br>
+      <code>forward(n)</code>: يتحرك للأمام n خطوة<br>
+      <code>backward(n)</code>: للخلف n خطوة<br>
+      <code>left()</code>: لفة يسار<br>
+      <code>right()</code>: لفة يمين<br>
+      <br>
+      <span id="limitText"></span>
+    </div>
+
+    <div>
+      <div class="grid" id="grid"></div>
+      <textarea id="codeArea">// مثال:
+forward(2);
+right();
+forward(3);</textarea>
+      <button class="run-btn" onclick="runUserCode()">▶️ تشغيل الكود</button>
+      <div class="error" id="errorMsg"></div>
+    </div>
+    <br>
+    <a href="/learning_gaem1.html" class="back-btn">🔙 رجوع للرئيسية</a>
+  </div>
+
+  <audio id="moveSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_24b9d6c39c.mp3" preload="auto"></audio>
+  <audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_36931e1cb2.mp3" preload="auto"></audio>
+  <audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7ba240efc6.mp3" preload="auto"></audio>
+
+  <script>
+    const gridSize = 9;
+    const grid = document.getElementById('grid');
+    const codeArea = document.getElementById('codeArea');
+    const errorMsg = document.getElementById('errorMsg');
+    const limitText = document.getElementById('limitText');
+    const moveSound = document.getElementById('moveSound');
+    const winSound = document.getElementById('winSound');
+    const loseSound = document.getElementById('loseSound');
+
+    let walls = [];
+    let robot;
+    let gift;
+    let maxCommands = 5;
+
+    function generateRandomPosition() {
+      return {
+        x: Math.floor(Math.random() * (gridSize - 2)) + 1,
+        y: Math.floor(Math.random() * (gridSize - 2)) + 1
+      };
+    }
+
+    function isSamePos(a, b) {
+      return a.x === b.x && a.y === b.y;
+    }
+
+    function generateLevel() {
+      do {
+    robot = { ...generateRandomPosition(), dir: 1 }; // إضافة الاتجاه
+    gift = generateRandomPosition();
+  } while (isSamePos(robot, gift));
+
+  walls = [];
+  while (walls.length < 10) {
+    const wall = generateRandomPosition();
+    if (
+      !isSamePos(wall, robot) &&
+      !isSamePos(wall, gift) &&
+      !walls.some(w => isSamePos(w, wall))
+    ) {
+      walls.push(wall);
+    }
+  }
+    }
+
+    function isWall(x, y) {
+      return walls.some(w => w.x === x && w.y === y);
+    }
+
+    function getRobotIcon(dir) {
+      return ['🤖↑', '🤖→', '🤖↓', '🤖←'][dir];
+    }
+
+    function createGrid() {
+      grid.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          if (isWall(x, y)) {
+            cell.classList.add('wall');
+            cell.textContent = '🧱';
+          } else if (robot.x === x && robot.y === y) {
+            cell.textContent = getRobotIcon(robot.dir);
+          } else if (gift.x === x && gift.y === y) {
+            cell.textContent = '🎁';
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+      limitText.textContent = `📝 عدد الأوامر المتاحة: ${maxCommands}`;
+    }
+
+    function forward(n = 1) {
+      for (let i = 0; i < n; i++) move(true);
+    }
+
+    function backward(n = 1) {
+      for (let i = 0; i < n; i++) move(false);
+    }
+
+    function move(forward = true) {
+      let dx = 0, dy = 0;
+      const dir = forward ? robot.dir : (robot.dir + 2) % 4;
+
+      if (dir === 0) dy = -1;
+      if (dir === 1) dx = 1;
+      if (dir === 2) dy = 1;
+      if (dir === 3) dx = -1;
+
+      const nx = robot.x + dx;
+      const ny = robot.y + dy;
+
+      if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !isWall(nx, ny)) {
+        robot.x = nx;
+        robot.y = ny;
+        moveSound.play();
+        createGrid();
+      }
+    }
+
+    function left() {
+      robot.dir = (robot.dir + 3) % 4;
+      moveSound.play();
+      createGrid();
+    }
+
+    function right() {
+      robot.dir = (robot.dir + 1) % 4;
+      moveSound.play();
+      createGrid();
+    }
+
+    function runUserCode() {
+      errorMsg.textContent = '';
+      robot.dir = 1;
+      createGrid();
+
+      try {
+        const code = codeArea.value;
+        const lines = code.split('\n').filter(line => line.trim() !== '');
+
+        if (lines.length > maxCommands) {
+          errorMsg.textContent = `🚫 عدد الأوامر تجاوز الحد (${maxCommands})`;
+          return;
+        }
+
+        let i = 0;
+        const interval = setInterval(() => {
+          if (i >= lines.length) {
+            clearInterval(interval);
+            checkWin();
+            return;
+          }
+
+          try {
+            eval(lines[i]);
+          } catch (e) {
+            errorMsg.textContent = '⚠️ خطأ في الكود: ' + e.message;
+            clearInterval(interval);
+          }
+          i++;
+        }, 500);
+      } catch (err) {
+        errorMsg.textContent = '⚠️ خطأ بالكود: ' + err.message;
+      }
+    }
+
+    function checkWin() {
+      if (robot.x === gift.x && robot.y === gift.y) {
+        alert("🎉 فزت! الروبوت وصل للهدية!");
+        winSound.play();
+        maxCommands += 2;
+      } else {
+        alert("❌ لم تصل! حاول مرة أخرى");
+        loseSound.play();
+      }
+      generateLevel();
+      createGrid();
+    }
+
+    generateLevel();
+    createGrid();
+  </script>
+</body>
+</html>

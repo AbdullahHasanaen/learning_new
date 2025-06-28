@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تعلم البرمجة</title>
+  <style>
+    body {
+      font-family: 'Tahoma', sans-serif;
+      background-color: #f0f8ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      color: royalblue;
+      margin-bottom: 10px;
+    }
+    h3 {
+      margin-top: 0;
+    }
+    .age-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .age-option {
+      padding: 0;
+      background-color: white;
+      border: 3px solid royalblue;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .age-option a {
+      display: block;
+      padding: 20px 30px;
+      text-decoration: none;
+      color: royalblue;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .age-option:hover {
+      background-color: #f0f8ff;
+    }
+
+    .age-option.selected {
+      background-color: royalblue;
+      box-shadow: 0 0 0 3px #a3c0ff;
+    }
+
+    .age-option.selected a {
+      color: white;
+    }
+
+    #startBtn {
+      padding: 10px 25px;
+      font-size: 16px;
+      border: none;
+      background-color: green;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #startBtn:hover {
+      background-color: darkgreen;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>👋 مرحبًا بك في مغامرة تعلّم البرمجة!</h1>
+  <h3>كم عمرك؟</h3>
+
+  <div class="age-options">
+    <div class="age-option" data-age="5-7"><a href="/robot.html">5 - 7</a></div>
+    <div class="age-option" data-age="8-11"><a href="/robot-level2.html">8 - 11</a></div>
+    <div class="age-option" data-age="12-15"><a href="/robot-level3.html">+12</a></div>
+  </div>
+
+  <button id="startBtn" disabled>ابدأ اللعبة</button>
+
+  <script>
+    let selectedAge = null;
+    let selectedLink = null;
+
+    document.querySelectorAll('.age-option').forEach(option => {
+      option.addEventListener('click', e => {
+        document.querySelectorAll('.age-option').forEach(b => b.classList.remove('selected'));
+        option.classList.add('selected');
+        selectedAge = option.dataset.age;
+        selectedLink = option.querySelector('a').getAttribute('href');
+        document.getElementById('startBtn').disabled = false;
+      });
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      if (selectedLink) {
+        window.location.href = selectedLink;
+      }
+    });
+  </script>
+
+</body>
+</html>

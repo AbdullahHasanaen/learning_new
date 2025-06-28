@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>برمج الروبوت - المستوى 1</title>
+  <style>
+    body {
+      font-family: 'Tahoma', sans-serif;
+      background-color: #e6f7ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: royalblue;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(9, 50px);
+      grid-template-rows: repeat(9, 50px);
+      gap: 2px;
+      margin: 20px 0;
+    }
+    .cell {
+      background-color: white;
+      border: 1px solid #ccc;
+      font-size: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .wall {
+      background-color: #999;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+    .controls button {
+      font-size: 20px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid royalblue;
+      background-color: white;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      background-color: royalblue;
+      color: white;
+    }
+    .run-btn {
+      padding: 10px 20px;
+      background-color: green;
+      color: white;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    .command-list {
+      margin: 10px;
+    }
+        .back-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #555;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: 0.3s;
+  font-size: 16px;
+}
+.back-btn:hover {
+  background-color: #333;
+}
+  </style>
+</head>
+<body>
+  <h2>🚗 برمج الروبوت - المستوى 1 🎁</h2>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="controls">
+    <button onclick="addCommand('forward')">⬆️ أمام</button>
+    <button onclick="addCommand('backward')">⬇️ خلف</button>
+    <button onclick="addCommand('left')">↩️ يسار</button>
+    <button onclick="addCommand('right')">↪️ يمين</button>
+  </div>
+
+  <div class="command-list" id="commands">📜 أوامرك: </div>
+
+  <button class="run-btn" onclick="runCommands()">▶️ تشغيل</button>
+
+  <audio id="moveSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_24b9d6c39c.mp3" preload="auto"></audio>
+  <audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_36931e1cb2.mp3" preload="auto"></audio>
+  <audio id="loseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7ba240efc6.mp3" preload="auto"></audio>
+    <br>
+    <a href="/learning_gaem1.html" class="back-btn">🔙 رجوع للرئيسية</a>
+  <script>
+    const gridSize = 9;
+    const grid = document.getElementById('grid');
+    const commandsDiv = document.getElementById('commands');
+    const moveSound = document.getElementById('moveSound');
+    const winSound = document.getElementById('winSound');
+    const loseSound = document.getElementById('loseSound');
+
+    let commands = [];
+    let robot = { x: 0, y: 0, dir: 1 }; // 0=↑ 1=→ 2=↓ 3=←
+    let gift = { x: 8, y: 8 };
+
+    const walls = [
+      { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 2, y: 4 },
+      { x: 4, y: 5 }, { x: 5, y: 5 }, { x: 6, y: 5 },
+      { x: 7, y: 2 }, { x: 7, y: 3 }, { x: 7, y: 4 }
+    ];
+
+    function isWall(x, y) {
+      return walls.some(w => w.x === x && w.y === y);
+    }
+
+    function getRobotIcon(dir) {
+      return ['🤖↑', '🤖→', '🤖↓', '🤖←'][dir];
+    }
+
+    function createGrid() {
+      grid.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+
+          if (isWall(x, y)) {
+            cell.classList.add('wall');
+            cell.textContent = '🧱';
+          } else if (robot.x === x && robot.y === y) {
+            cell.textContent = getRobotIcon(robot.dir);
+          } else if (gift.x === x && gift.y === y) {
+            cell.textContent = '🎁';
+          }
+
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function addCommand(cmd) {
+      commands.push(cmd);
+      commandsDiv.textContent = '📜 أوامرك: ' + commands.map(c => {
+        switch (c) {
+          case 'forward': return '⬆️';
+          case 'backward': return '⬇️';
+          case 'left': return '↩️';
+          case 'right': return '↪️';
+        }
+      }).join(' ');
+    }
+
+    function runCommands() {
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= commands.length) {
+          clearInterval(interval);
+          checkWin();
+          return;
+        }
+
+        const cmd = commands[i];
+        if (cmd === 'left') robot.dir = (robot.dir + 3) % 4;
+        if (cmd === 'right') robot.dir = (robot.dir + 1) % 4;
+        if (cmd === 'forward') move(true);
+        if (cmd === 'backward') move(false);
+
+        createGrid();
+        i++;
+      }, 500);
+    }
+
+    function move(forward = true) {
+      let dx = 0, dy = 0;
+      const dir = forward ? robot.dir : (robot.dir + 2) % 4;
+
+      if (dir === 0) dy = -1;
+      if (dir === 1) dx = 1;
+      if (dir === 2) dy = 1;
+      if (dir === 3) dx = -1;
+
+      const nx = robot.x + dx;
+      const ny = robot.y + dy;
+
+      if (
+        nx >= 0 && nx < gridSize &&
+        ny >= 0 && ny < gridSize &&
+        !isWall(nx, ny)
+      ) {
+        robot.x = nx;
+        robot.y = ny;
+        moveSound.play();
+      }
+    }
+
+    function checkWin() {
+      if (robot.x === gift.x && robot.y === gift.y) {
+        alert("🎉 فزت! الروبوت وصل للهدية!");
+        winSound.play();
+      } else {
+        alert("❌ لم تصل! حاول مرة أخرى");
+        loseSound.play();
+      }
+
+      commands = [];
+      commandsDiv.textContent = '📜 أوامرك: ';
+    }
+
+    createGrid();
+  </script>
+</body>
+</html>
